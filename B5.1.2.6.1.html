@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AssignmentX Math Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --wood-brown: #3e2723;
+            --wood-grain: #5d4037; 
+            --mathly-blue: #0984e3;
+            --mathly-yellow: #fdcb6e;
+            --mathly-red: #d63031;
+            --mathly-green: #00b894;
+            --glass-white: rgba(255, 255, 255, 0.95);
+            --rope-color: #8d6e63;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(rgba(10, 25, 47, 0.6), rgba(10, 25, 47, 0.6)), url('background.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            min-height: 100vh; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            overflow: hidden;
+            position: relative;
+        }
+
+        #bg-canvas { position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: 0.25; }
+
+        .character-img {
+            position: absolute; 
+            z-index: 5; 
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3));
+            animation: float 3.5s ease-in-out infinite;
+            pointer-events: none;
+        }
+        
+        #panda-main { width: 220px; top: -60px; right: -100px; --r: 12deg; transform: rotate(var(--r)); }
+        #mouse-main { width: 200px; top: -50px; left: -100px; --r: -12deg; transform: rotate(var(--r)); }
+
+        @keyframes float { 
+            0%, 100% { transform: translateY(0) rotate(var(--r)); } 
+            50% { transform: translateY(-15px) rotate(var(--r)); } 
+        }
+
+        .game-area-container {
+            display: none; 
+            width: 92%; 
+            max-width: 440px;
+            z-index: 10;
+            position: relative;
+            animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            padding-top: 40px; 
+        }
+
+        .active { display: block; }
+        @keyframes zoomIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .wood-title-banner {
+            background: linear-gradient(135deg, var(--wood-grain) 0%, var(--wood-brown) 100%);
+            border: 4px solid #2d1d1a;
+            border-radius: 15px 50px 20px 45px; 
+            padding: 18px 25px;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.4);
+            margin-bottom: 35px; 
+            position: relative;
+            z-index: 11;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform-origin: center -100vh;
+            animation: sway 6s ease-in-out infinite;
+        }
+
+        .wood-title-banner::before, .wood-title-banner::after {
+            content: ''; position: absolute; top: -100vh; width: 8px; height: 100vh; 
+            background: repeating-linear-gradient(0deg, var(--rope-color), var(--rope-color) 5px, #4e342e 10px);
+            z-index: -1;
+        }
+        .wood-title-banner::before { left: 40px; }
+        .wood-title-banner::after { right: 40px; }
+
+        @keyframes sway { 0%, 100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
+
+        .banner-logo {
+            width: 60px; height: 60px; object-fit: contain; position: absolute;
+            left: 20px; filter: drop-shadow(0 0 10px white);
+        }
+
+        .wood-title-banner h2 {
+            font-size: 1.1rem; color: #fff9c4; font-weight: 900; text-transform: uppercase;
+            margin-left: 55px; text-shadow: 2px 2px 0px black;
+        }
+
+        .card { 
+            width: 100%; background: var(--glass-white); backdrop-filter: blur(12px); 
+            border: 6px solid var(--wood-brown); border-radius: 40px; 
+            padding: 25px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.5); 
+            position: relative; z-index: 12;
+        }
+
+        .mission-header { background: var(--wood-brown); color: white; padding: 12px; border-radius: 20px; margin-bottom: 15px; }
+        .btn-green { width: 100%; padding: 16px; border: none; border-radius: 20px; background: var(--mathly-green); color: white; font-weight: 900; font-size: 1.1rem; cursor: pointer; text-transform: uppercase; box-shadow: 0 6px 0 #009475; margin-bottom: 5px; }
+        .btn-green:active { transform: translateY(4px); box-shadow: 0 2px 0 #009475; }
+        
+        .tool-row { display: flex; justify-content: center; gap: 8px; margin-top: 15px; }
+        .btn-tool { flex: 1; background: white; border: 2px solid var(--wood-brown); padding: 10px 5px; border-radius: 12px; font-size: 0.75rem; font-weight: 800; cursor: pointer; }
+        
+        /* Number Line UI */
+        .number-line-container {
+            background: #f8f9fa; border: 3px solid #dee2e6; border-radius: 15px;
+            padding: 20px 10px; margin: 15px 0; position: relative; height: 100px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .line-base { height: 4px; width: 100%; background: var(--wood-brown); position: relative; }
+        .tick { position: absolute; width: 2px; height: 12px; background: var(--wood-brown); top: -4px; }
+        .tick-label { position: absolute; top: 15px; font-size: 0.65rem; font-weight: 900; transform: translateX(-50%); }
+        .pointer { position: absolute; top: -35px; font-size: 1.5rem; transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateX(-50%); }
+
+        .key-badge { background: #e3f2fd; border: 2px dashed var(--mathly-blue); padding: 8px; border-radius: 12px; font-weight: 800; color: #1565c0; font-size: 0.85rem; margin-bottom: 10px; }
+        .question-box { background: white; border-left: 10px solid var(--mathly-blue); padding: 15px; text-align: left; font-size: 1rem; font-weight: 800; border-radius: 0 20px 20px 0; min-height: 80px; }
+        input { width: 100%; padding: 10px; border-radius: 15px; border: 3px solid #dfe6e9; font-size: 1.8rem; text-align: center; font-weight: 900; margin: 10px 0; outline: none; }
+
+        .timer-container { width: 100%; height: 12px; background: #eee; border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+        #timer-bar { width: 100%; height: 100%; background: var(--mathly-red); transition: width 1s linear; }
+
+        .level-map { display: flex; justify-content: center; gap: 8px; margin-top: 15px; }
+        .lvl-dot { width: 40px; height: 40px; border-radius: 12px; background: white; border: 3px solid #d7ccc8; display: flex; align-items: center; justify-content: center; font-weight: 900; cursor: pointer; }
+        .lvl-dot.active-lvl { background: var(--mathly-yellow); border-color: #f39c12; }
+        .lvl-dot.locked { opacity: 0.4; cursor: not-allowed; }
+
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 30px; border: 5px solid var(--wood-brown); width: 85%; max-width: 350px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+
+    <div id="scr-start" class="game-area-container active">
+        <img src="mouse.png" id="mouse-main" class="character-img" alt="Mouse">
+        <img src="panda.png" id="panda-main" class="character-img" alt="Panda">
+        <div class="wood-title-banner">
+            <img src="logo.png" class="banner-logo" alt="Logo">
+            <h2>ASSIGNMENTX - BASIC 5</h2>
+        </div>
+        <div class="card">
+            <div class="mission-header"><h1 style="font-size: 1rem; text-transform: uppercase; font-weight: 900;">Number: Whole Numbers Operations</h1></div>
+            <p style="font-weight: 800; color: var(--wood-brown); margin-bottom: 20px; font-size: 0.9rem;">B5.1.2.6.1: Solve simple addition and subtraction problems involving integers.</p>
+            <button class="btn-green" onclick="startMission()">START NAVIGATOR</button>
+            <div class="tool-row">
+                <button class="btn-tool" onclick="toggleModal(true)">How to Play</button>
+                <button class="btn-tool btn-mute" onclick="toggleAudio()">🔊 SFX: ON</button>
+                <button class="btn-tool" style="color:var(--mathly-red)" onclick="resetData()">RESET</button>
+            </div>
+            <div class="level-map" id="map-ui"></div>
+        </div>
+    </div>
+
+    <div id="scr-game" class="game-area-container">
+        <img src="mouse.png" id="mouse-main" class="character-img" alt="Mouse">
+        <img src="panda.png" id="panda-main" class="character-img" alt="Panda">
+        <div class="wood-title-banner">
+            <img src="logo.png" class="banner-logo" alt="Logo">
+            <h2>ASSIGNMENTX - BASIC 5</h2>
+        </div>
+        <div class="card">
+            <div class="timer-container"><div id="timer-bar"></div></div>
+            <div style="display: flex; justify-content: space-between; font-weight: 900; font-size: 0.8rem; margin-bottom: 8px;">
+                <div>SYNC: <span id="score">0</span></div>
+                <div id="lvl-indicator">LEVEL 1</div>
+                <div>⏳ <span id="timer-text">40</span>s</div>
+            </div>
+
+            <div class="number-line-container" id="line-ui">
+                <div class="line-base" id="main-line"></div>
+                <div class="pointer" id="player-pointer">📍</div>
+            </div>
+
+            <div class="question-box" id="question-ui">Initialising number line...</div>
+            <input type="number" id="user-input" placeholder="Enter Answer">
+            <button class="btn-green" onclick="submitAnswer()">VERIFY INTEGER</button>
+            <div id="feedback" style="height: 20px; margin-top: 10px; font-weight: 900; font-size: 0.9rem;"></div>
+            
+            <div class="tool-row">
+                <button class="btn-tool" onclick="getHint()">💡 HINT</button>
+                <button class="btn-tool" style="color:var(--mathly-red)" onclick="exitToMenu()">🚪 EXIT</button>
+                <button class="btn-tool btn-mute" onclick="toggleAudio()">🔊 SFX: ON</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="scr-end" class="game-area-container">
+        <div class="card">
+            <h1 id="end-status" style="font-size: 1.5rem; margin-bottom: 10px; font-weight: 900; color: var(--wood-brown);">MISSION COMPLETE</h1>
+            <div style="font-size: 4rem; font-weight: 900; color: var(--mathly-yellow);" id="final-score">0</div>
+            <p id="end-msg" style="font-weight: 800; margin: 15px 0; color: var(--wood-brown);"></p>
+            <button class="btn-green" onclick="location.reload()">RE-START MISSION</button>
+        </div>
+    </div>
+
+    <div id="rules-modal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 15px; font-weight: 900;">MISSION PROTOCOLS</h2>
+            <ul style="text-align: left; font-size: 0.85rem; line-height: 1.6; font-weight: 700; list-style: none; margin-bottom: 20px;">
+                <li>➡️ <span style="color:var(--mathly-blue)">ADDITION:</span> Move RIGHT on the line.</li>
+                <li>⬅️ <span style="color:var(--mathly-red)">SUBTRACTION:</span> Move LEFT on the line.</li>
+                <li>🌊 <span style="color:var(--mathly-green)">DIVING:</span> Below surface = Negative (-).</li>
+                <li>🏆 <span style="color:var(--mathly-yellow)">GOAL:</span> Score 50 to unlock next level.</li>
+            </ul>
+            <button class="btn-green" onclick="toggleModal(false)">UNDERSTOOD</button>
+        </div>
+    </div>
+
+    <script>
+        const audio = { bg: new Audio("BGMSound.mp3"), correct: new Audio("correctanswer.mp3"), wrong: new Audio("wronganswer.mp3") };
+        audio.bg.loop = true;
+        let isMuted = false;
+
+        function toggleAudio() {
+            isMuted = !isMuted;
+            document.querySelectorAll('.btn-mute').forEach(b => b.innerText = isMuted ? "🔇 SFX: OFF" : "🔊 SFX: ON");
+            isMuted ? audio.bg.pause() : audio.bg.play().catch(()=>{});
+        }
+
+        // Background Symbols Logic
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let symbols = [];
+        function initBG() {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            symbols = Array.from({length: 30}, () => ({
+                x: Math.random()*canvas.width, y: Math.random()*canvas.height,
+                char: ['-3','+5','-1','0','+8','-7'][Math.floor(Math.random()*6)],
+                size: Math.random()*20 + 15, speed: Math.random()*1 + 0.5,
+                color: ["#e84118", "#fbc531", "#2ecc71", "#00d2ff"][Math.floor(Math.random()*4)]
+            }));
+        }
+        function drawBG() {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            symbols.forEach(s => {
+                ctx.fillStyle = s.color; ctx.font = `900 ${s.size}px Inter`;
+                ctx.fillText(s.char, s.x, s.y);
+                s.y += s.speed; if(s.y > canvas.height + 50) s.y = -50;
+            });
+            requestAnimationFrame(drawBG);
+        }
+        initBG(); drawBG();
+
+        // Game State
+        let storageKey = 'assignmentx_integers_b5';
+        let progress = JSON.parse(localStorage.getItem(storageKey)) || { unlocked: [1] };
+        let state = { score: 0, qIdx: 1, currentLvl: 1, target: 0, timer: null, timeLeft: 40 };
+
+        function renderMap() {
+            const mapUi = document.getElementById('map-ui');
+            mapUi.innerHTML = '';
+            for(let i=1; i<=3; i++) {
+                const unlocked = progress.unlocked.includes(i);
+                const dot = document.createElement('div');
+                dot.className = `lvl-dot ${unlocked ? '' : 'locked'} ${state.currentLvl === i ? 'active-lvl' : ''}`;
+                dot.innerText = unlocked ? i : '🔒';
+                if(unlocked) dot.onclick = () => { state.currentLvl = i; renderMap(); };
+                mapUi.appendChild(dot);
+            }
+        }
+        renderMap();
+
+        function startMission() {
+            if(!isMuted) audio.bg.play().catch(()=>{});
+            document.getElementById('scr-start').classList.remove('active');
+            document.getElementById('scr-game').classList.add('active');
+            state.score = 0; state.qIdx = 1;
+            document.getElementById('score').innerText = '0';
+            generateChallenge();
+        }
+
+        function generateChallenge() {
+            const line = document.getElementById('main-line');
+            line.innerHTML = '';
+            const min = -10, max = 10;
+            
+            // Draw ticks
+            for(let i = min; i <= max; i++) {
+                const pos = ((i - min) / (max - min)) * 100;
+                const tick = document.createElement('div');
+                tick.className = 'tick'; tick.style.left = pos + '%';
+                const label = document.createElement('div');
+                label.className = 'tick-label'; label.style.left = pos + '%';
+                label.innerText = i;
+                line.appendChild(tick); line.appendChild(label);
+            }
+
+            const qBox = document.getElementById('question-ui');
+            const pointer = document.getElementById('player-pointer');
+            
+            let a = Math.floor(Math.random()*11) - 5; // -5 to 5
+            let b = Math.floor(Math.random()*6) + 1; // 1 to 6
+            
+            // Set pointer to initial value 'a'
+            const startPos = ((a - min) / (max - min)) * 100;
+            pointer.style.left = startPos + '%';
+
+            if(state.currentLvl === 1) { // Basic Addition
+                qBox.innerHTML = `Start at <b>${a}</b>. Move <b>${b}</b> steps to the <span style="color:var(--mathly-green)">RIGHT</span>. <br> Equation: ${a} + ${b} = ?`;
+                state.target = a + b;
+            } else if(state.currentLvl === 2) { // Subtraction & Mixed
+                const isSub = Math.random() > 0.5;
+                if(isSub) {
+                    qBox.innerHTML = `Start at <b>${a}</b>. Move <b>${b}</b> steps to the <span style="color:var(--mathly-red)">LEFT</span>. <br> Equation: ${a} - ${b} = ?`;
+                    state.target = a - b;
+                } else {
+                    let negB = -b;
+                    qBox.innerHTML = `Solve the addition: <b>${a} + (${negB})</b>. Where do you land?`;
+                    state.target = a + negB;
+                }
+            } else { // Word Problems
+                const scenarios = [
+                    { t: `A fish is at <b>${a}m</b> below sea level. It dives <b>${b}m</b> deeper. What is its new position?`, v: a - b },
+                    { t: `A submarine at <b>${a}m</b> rises up <b>${b}m</b>. What is its position relative to the surface?`, v: a + b },
+                    { t: `The temperature was <b>${a}°C</b>. It dropped by <b>${b}°C</b>. What is the new temperature?`, v: a - b }
+                ];
+                const s = scenarios[Math.floor(Math.random()*scenarios.length)];
+                qBox.innerHTML = s.t;
+                state.target = s.v;
+            }
+
+            document.getElementById('user-input').value = '';
+            document.getElementById('user-input').focus();
+            document.getElementById('feedback').innerText = '';
+            runTimer();
+        }
+
+        function runTimer() {
+            clearInterval(state.timer);
+            state.timeLeft = 40;
+            state.timer = setInterval(() => {
+                state.timeLeft--;
+                document.getElementById('timer-text').innerText = state.timeLeft;
+                document.getElementById('timer-bar').style.width = (state.timeLeft/40)*100 + "%";
+                if(state.timeLeft <= 0) submitAnswer(true);
+            }, 1000);
+        }
+
+        function submitAnswer(timeout = false) {
+            clearInterval(state.timer);
+            const val = parseInt(document.getElementById('user-input').value);
+            const isCorrect = !timeout && val === state.target;
+            const fb = document.getElementById('feedback');
+            
+            // Move pointer to answer for feedback
+            const min = -10, max = 10;
+            const endPos = ((state.target - min) / (max - min)) * 100;
+            document.getElementById('player-pointer').style.left = endPos + '%';
+
+            if(isCorrect) {
+                state.score += 10;
+                fb.innerText = "✓ CORRECT! Navigate Onward."; fb.style.color = "var(--mathly-green)";
+                if(!isMuted) audio.correct.play();
+            } else {
+                fb.innerText = "✗ WRONG! The answer was " + state.target; fb.style.color = "var(--mathly-red)";
+                if(!isMuted) audio.wrong.play();
+            }
+
+            document.getElementById('score').innerText = state.score;
+            setTimeout(() => {
+                if(state.qIdx < 8) { state.qIdx++; generateChallenge(); } 
+                else { endGame(); }
+            }, 2000);
+        }
+
+        function endGame() {
+            document.getElementById('scr-game').classList.remove('active');
+            document.getElementById('scr-end').classList.add('active');
+            document.getElementById('final-score').innerText = state.score;
+            const msg = document.getElementById('end-msg');
+            if(state.score >= 50) {
+                msg.innerText = "Great job Navigator! You've mastered these integers.";
+                if(state.currentLvl < 3 && !progress.unlocked.includes(state.currentLvl + 1)) {
+                    progress.unlocked.push(state.currentLvl + 1);
+                    localStorage.setItem(storageKey, JSON.stringify(progress));
+                }
+            } else { msg.innerText = "Keep practicing! Use the number line to guide your moves."; }
+        }
+
+        function toggleModal(s) { document.getElementById('rules-modal').style.display = s ? 'flex' : 'none'; }
+        function exitToMenu() { if(confirm("Abandon Mission?")) location.reload(); }
+        function resetData() { if(confirm("Reset all levels?")) { localStorage.removeItem(storageKey); location.reload(); } }
+        function getHint() { document.getElementById('feedback').innerText = "HINT: Move Right for (+), Left for (-)"; document.getElementById('feedback').style.color = "var(--mathly-blue)"; }
+        
+        document.getElementById('user-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') submitAnswer(); });
+        window.addEventListener('resize', initBG);
+    </script>
+</body>
+</html>
